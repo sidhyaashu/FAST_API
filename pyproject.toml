@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastapi-app"
+version = "0.1.0"
+description = "A FastAPI-based project"
+authors = [
+    { name = "Asutosh sidhya", email = "ashutoshsidhya69@gmail.com" }
+]
+license = { text = "MIT" }
+keywords = ["fastapi", "web", "api"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Framework :: FastAPI",
+    "License :: OSI Approved :: MIT License"
+]
+
+[tool.setuptools]
+packages = ["fastapi_app"]
+package-dir = { "" = "src" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+
+[tool.isort]
+profile = "black"
+
+[tool.flake8]
+max-line-length = 88
+exclude = ["__pycache__", "venv", ".venv"]
+
+[tool.mypy]
+strict = true
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["fastapi_app"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
