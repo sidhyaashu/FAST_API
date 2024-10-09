@@ -49,11 +49,8 @@ Run the app using `uvicorn`:
 uvicorn main:app --reload
 ```
 
-## Docker Support
-Build and run the Docker container:
+# after done the all 5 stages move to src.app.server
 
 ```bash
-docker build -t fastapi-app .
-docker run -d -p 80:80 fastapi-app
+uvicorn src.app.server:app --reload
 ```
-

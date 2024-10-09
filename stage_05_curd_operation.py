@@ -76,7 +76,7 @@ async def get_post(id:int):
 
 
 #delete post
-@app.delete("/post/{id}")
+@app.delete("/post/{id}",status_code=status.HTTP_204_NO_CONTENT)
 async def delete_post(id:int):
     post = find_post_by_id(id)
     if not post:
@@ -84,4 +84,17 @@ async def delete_post(id:int):
     else:
         index = find_index(id)
         my_data.pop(index)
-        return {"posts":my_data}
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    
+
+#Update 
+@app.put("/post/{id}",status_code=status.HTTP_202_ACCEPTED)
+async def update_post(id:int,post:Post):
+    x = find_index(id)
+    if not x:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Post {id} not found")
+    else:
+        post_dict = post.model_dump()
+        post_dict["id"] = id
+        my_data[x] = post_dict
+        return {"data":my_data[x]}
