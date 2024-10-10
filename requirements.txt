@@ -1,6 +1,6 @@
 fastapi[all]
 uvicorn[standard]
 pydantic
-
+psycopg2
 
 -e .
