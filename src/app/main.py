@@ -1,100 +1,95 @@
-from fastapi import FastAPI , Response ,status ,HTTPException
+from fastapi import FastAPI , Response ,status ,HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
 from random import randrange
 
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import time
+from . import models
+from .database import engine , get_db
+from sqlalchemy.orm import Session
+
+
+
+models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
+
+
 
 class Post(BaseModel):  # Schema creation
     title: str
     content: str
     published: bool = True  # default setting
-    rating: Optional[int] = None
 
-my_data = [
-    {"title": "books 1", "content": "Hey this book is so good", "id": 1},
-    {"title": "books 2", "content": "Hey this book is so good", "id": 2},
-    {"title": "books 3", "content": "Hey this book is so good", "id": 3}
-]
-
-
-def find_post_by_id(id):
-    for p in my_data:
-        if p["id"] == id:
-            return p
-        
-def find_index(id):
-    for i,p in enumerate(my_data):
-        if p["id"] == id:
-            return i
+while True:
+    try:
+        conn = psycopg2.connect(host="localhost",database="fastapi",user="postgres",password="9749571885",cursor_factory=RealDictCursor)
+        cursor = conn.cursor()
+        print("Connected to database")
+        break
+    except Exception as e:
+        print("Database connection failed")
+        print(e)
+        time.sleep(5)
 
 
 # Request to GET method http://127.0.0.1:8000
 @app.get("/")
-async def root():
-    return {"message": "Hi my name is Sidhya"}
+async def root(db:Session = Depends(get_db)):
+    return {"message": "Success"}
 
 
-# GET all posts http://127.0.0.1:8000/post
-@app.get("/post")
+# GET all posts http://127.0.0.1:8000/posts
+@app.get("/posts")
 async def get_data():
-    return {"data": my_data}
+    cursor.execute(""" SELECT * FROM posts """)
+    posts = cursor.fetchall()
+    return {"data": posts}
 
 
 # POST a new post http://127.0.0.1:8000/post
 @app.post("/post",status_code=status.HTTP_201_CREATED)
-async def create_post(new_post: Post):
-    post_dict = new_post.model_dump()  # Correct usage, dump the instance
-    post_dict["id"] = randrange(0, 100000)  # Add random ID
-    my_data.append(post_dict)
-    return {"data": post_dict}
+async def create_post(post: Post):
+    cursor.execute(""" INSERT INTO posts (title,content,published) VALUES(%s, %s, %s) RETURNING * """,
+                              (post.title,post.content,post.published))
+    new_post = cursor.fetchone()
+    conn.commit()
+    return {"data": new_post}
 
-# http://127.0.0.1:8000/post/latest
-@app.get("/post/latest")
-async def get_latest():
-    x = my_data[len(my_data)-1]
-    return {"data":x}
 
-#Get single posts http://127.0.0.1:8000/post/1
-# @app.get("/post/{id}")
-# async def get_post(id:int,response:Response):
-#     x = find_post_by_id(id)
-#     if not x:
-#         # response.status_code = 404
-#         response.status_code = status.HTTP_404_NOT_FOUND
-#         return {"message":f"Post id {id} was not found"}
 
-#     return {"data":x}
-
-#Alternate
+#GET http://127.0.0.1:8000/post/4
 @app.get("/post/{id}")
 async def get_post(id:int):
-    x = find_post_by_id(id)
-    if not x:
+    cursor.execute(""" SELECT * FROM posts WHERE id = %s """,(str(id),))
+    get_post = cursor.fetchone()
+    if not get_post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Post {id} not found")
-    return {"data":x}
+    return {"data":get_post}
 
 
-#delete post
+#DELETE http://127.0.0.1:8000/post/2
 @app.delete("/post/{id}",status_code=status.HTTP_204_NO_CONTENT)
 async def delete_post(id:int):
-    post = find_post_by_id(id)
-    if not post:
+    cursor.execute("""DELETE FROM posts WHERE id = %s RETURNING *""",(str(id),))
+    deleted_post = cursor.fetchone()
+    print(delete_post)
+    conn.commit()
+    if deleted_post == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Post {id} not found")
     else:
-        index = find_index(id)
-        my_data.pop(index)
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
+        return {"deleted ":deleted_post}
     
 
-#Update 
+#UPDATE http://127.0.0.1:8000/post/4
 @app.put("/post/{id}",status_code=status.HTTP_202_ACCEPTED)
 async def update_post(id:int,post:Post):
-    x = find_index(id)
-    if not x:
+    cursor.execute("""UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING * """,
+                   (post.title,post.content,post.published,str(id)))
+    updated_post = cursor.fetchone()
+    conn.commit()
+    if updated_post == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Post {id} not found")
     else:
-        post_dict = post.model_dump()
-        post_dict["id"] = id
-        my_data[x] = post_dict
-        return {"data":my_data[x]}
+        return {"data":updated_post}
