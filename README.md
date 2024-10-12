@@ -49,7 +49,7 @@ Run the app using `uvicorn`:
 uvicorn main:app --reload
 ```
 
-# after done the all 5 stages move to src.app.server
+# After compelete the all 5 stages move to src.app.server
 
 ```bash
 uvicorn src.app.server:app --reload
